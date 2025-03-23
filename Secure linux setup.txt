@@ -1,0 +1,86 @@
+1️. Подключение Ubuntu по SSH с Windows
+На Ubuntu (проверка IP):
+ip a или hostname -I
+На Windows (в PowerShell или CMD):
+ssh devadmin@ip-адрес
+Если вход по паролю — ввести пароль пользователя devadmin
+
+2. Запуск скрипта автоматизации
+cd /папка_со_скриптом
+chmod +x setup.sh
+sudo ./setup.sh
+Скрипт запускается от имени root, поэтому нужен sudo
+
+3. Перезапуск служб после обновления
+Во время обновления (apt upgrade) может появиться окно:
+Services need to be restarted
+sshd
+cron
+Enter, оставив всё как есть, чтобы службы были перезапущены
+
+4. Создание нового пользователя devadmin
+Если создаёте пользователя вручную: 
+sudo adduser devadmin
+sudo usermod -aG sudo devadmin
+Проверка: id devadmin
+Ожидаете: uid=1001(devadmin) gid=1001(devadmin) groups=1001(devadmin),27(sudo)
+
+5. Проверка статуса SSH
+sudo systemctl status ssh
+Ожидаете: Active: active (running)
+
+6. Создание SSH-ключа на клиентской ОС
+На Windows (в PowerShell): ssh-keygen
+Нажимайте enter пока не создастся ключ в папке
+C:\Users\User\.ssh\id_rsa.pub
+Просмотреть ключ: type $env:USERPROFILE\.ssh\id_rsa.pub
+На Ubuntu вставить ключ:sudo mkdir -p /home/devadmin/.ssh
+sudo nano /home/devadmin/.ssh/authorized_keys
+Ctrl+O потом Enter и Ctrl+X
+sudo chown -R devadmin:devadmin /home/devadmin/.ssh
+sudo chmod 700 /home/devadmin/.ssh
+sudo chmod 600 /home/devadmin/.ssh/authorized_keys
+
+7. Проверка входа по SSH-ключу
+Теперь можно подключиться по SSH без пароля ssh devadmin@ip
+
+8. Проверка Fail2Ban
+Установка fail2ban: sudo apt install fail2ban -y
+Запуск и включение: sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+Проверка статуса: sudo systemctl status fail2ban
+sudo fail2ban-client status
+В конце будет
+Status: active
+Jail list: sshd
+
+9. Настройка UFW (брандмауэр)
+Включение UFW и открытие нужных портов: 
+sudo ufw allow OpenSSH
+sudo ufw allow http
+sudo ufw allow https
+sudo ufw enable
+Проверка: sudo ufw status verbose
+Ожидаете: 
+                        Action      From
+OpenSSH                    ALLOW       Anywhere
+80/tcp                     ALLOW       Anywhere
+443/tcp                    ALLOW       Anywhere
+
+10. Настройка cron-задачи на бэкап
+Создание скрипта для бэкапа: sudo nano /usr/local/bin/backup.sh
+Вставить в файл: tar -czf /var/backups/etc-backup-$(date +%F).tar.gz /etc
+Ctrl+O потом enter и Ctrl+X
+Сделать скрипт исполняемым: sudo chmod +x /usr/local/bin/backup.sh
+Добавление задачи в cron: sudo crontab -e
+Добавить строку: 0 2 * * * /usr/local/bin/backup.sh
+Проверка: sudo crontab -l
+11. Проверка результата бэкапа
+Ручной запуск для проверки: sudo /usr/local/bin/backup.sh
+Проверка: ls /var/backups/
+Что должно быть: etc-backup-2025-03-24.tar.gz
+
+
+
+
+
